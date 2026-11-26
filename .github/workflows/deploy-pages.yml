@@ -28,7 +28,7 @@ jobs:
 
       - name: Pasang dependensi
         working-directory: nilai-siswa
-        run: npm ci
+        run: npm install
 
       - name: Build (hash router, jalur relatif)
         working-directory: nilai-siswa
