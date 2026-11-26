@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <!-- interactive-widget=resizes-content membuat tata letak ikut menyesuaikan
+         saat papan ketik terbuka, sehingga kolom isian tetap terlihat. -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content"
+    />
+    <meta name="theme-color" content="#1B58C4" />
+    <meta
+      name="description"
+      content="SINILAI — aplikasi input nilai siswa multi sekolah dan multi mata pelajaran dengan penilaian harian, UTS, dan UAS. Dapat dipasang di Android dan iPhone serta bekerja offline."
+    />
+    <title>SINILAI — Aplikasi Input Nilai Siswa</title>
+
+    <!-- Dapat dipasang sebagai aplikasi (PWA) di Android dan iPhone -->
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="icon" type="image/png" sizes="64x64" href="/assets/images/icon-64.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/assets/images/apple-touch-icon.png" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="SINILAI" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="format-detection" content="telephone=no" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

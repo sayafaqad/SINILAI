@@ -1,0 +1,131 @@
+/** @type {import('tailwindcss').Config} */
+const token = (name) => `hsl(var(${name}) / <alpha-value>)`;
+
+export default {
+  content: ['./index.html', './src/**/*.{js,jsx,ts,tsx}'],
+  theme: {
+    extend: {
+      colors: {
+        // Semantic theme slots
+        background: token('--background'),
+        foreground: token('--foreground'),
+        card: token('--card'),
+        'card-foreground': token('--card-foreground'),
+        popover: token('--popover'),
+        'popover-foreground': token('--popover-foreground'),
+        primary: token('--primary'),
+        'primary-foreground': token('--primary-foreground'),
+        secondary: token('--secondary'),
+        'secondary-foreground': token('--secondary-foreground'),
+        muted: token('--muted'),
+        'muted-foreground': token('--muted-foreground'),
+        accent: token('--accent'),
+        'accent-foreground': token('--accent-foreground'),
+        destructive: token('--destructive'),
+        'destructive-foreground': token('--destructive-foreground'),
+        border: token('--border'),
+        input: token('--input'),
+        ring: token('--ring'),
+
+        // Brand blue scale
+        'primary-50': token('--primary-50'),
+        'primary-100': token('--primary-100'),
+        'primary-200': token('--primary-200'),
+        'primary-300': token('--primary-300'),
+        'primary-400': token('--primary-400'),
+        'primary-500': token('--primary-500'),
+        'primary-600': token('--primary-600'),
+        'primary-700': token('--primary-700'),
+        'primary-800': token('--primary-800'),
+        'primary-900': token('--primary-900'),
+
+        // Status semantics
+        success: token('--success'),
+        'success-surface': token('--success-surface'),
+        warning: token('--warning'),
+        'warning-surface': token('--warning-surface'),
+        danger: token('--danger'),
+        'danger-surface': token('--danger-surface'),
+        info: token('--info'),
+        'info-surface': token('--info-surface'),
+
+        // Predikat bands
+        'predikat-a': token('--predikat-a'),
+        'predikat-a-surface': token('--predikat-a-surface'),
+        'predikat-b': token('--predikat-b'),
+        'predikat-b-surface': token('--predikat-b-surface'),
+        'predikat-c': token('--predikat-c'),
+        'predikat-c-surface': token('--predikat-c-surface'),
+        'predikat-d': token('--predikat-d'),
+        'predikat-d-surface': token('--predikat-d-surface'),
+
+        // Charts
+        'chart-1': token('--chart-1'),
+        'chart-2': token('--chart-2'),
+        'chart-3': token('--chart-3'),
+        'chart-4': token('--chart-4'),
+        'chart-5': token('--chart-5'),
+        'chart-6': token('--chart-6'),
+        'chart-grid': token('--chart-grid'),
+        'chart-axis': token('--chart-axis'),
+      },
+      borderRadius: {
+        sm: '6px',
+        md: '8px',
+        lg: '12px',
+        xl: '16px',
+        full: '9999px',
+      },
+      fontFamily: {
+        sans: [
+          '-apple-system',
+          'BlinkMacSystemFont',
+          '"Segoe UI"',
+          'Roboto',
+          '"Helvetica Neue"',
+          'Arial',
+          '"Noto Sans"',
+          'sans-serif',
+        ],
+        mono: [
+          'ui-monospace',
+          '"SF Mono"',
+          'SFMono-Regular',
+          'Menlo',
+          'Consolas',
+          '"Liberation Mono"',
+          'monospace',
+        ],
+      },
+      fontSize: {
+        display: ['28px', { lineHeight: '1.2', letterSpacing: '-0.02em', fontWeight: '600' }],
+        'headline-lg': ['22px', { lineHeight: '1.25', letterSpacing: '-0.015em', fontWeight: '600' }],
+        'headline-md': ['18px', { lineHeight: '1.3', letterSpacing: '-0.01em', fontWeight: '600' }],
+        'headline-sm': ['15px', { lineHeight: '1.35', letterSpacing: '-0.005em', fontWeight: '600' }],
+        'body-lg': ['16px', { lineHeight: '1.55' }],
+        'body-md': ['14px', { lineHeight: '1.5' }],
+        'body-sm': ['13px', { lineHeight: '1.5', letterSpacing: '0.005em' }],
+        'label-md': ['13px', { lineHeight: '1.3', letterSpacing: '0.01em', fontWeight: '500' }],
+        'label-caps': ['11px', { lineHeight: '1.2', letterSpacing: '0.08em', fontWeight: '600' }],
+        'numeric-lg': ['30px', { lineHeight: '1.1', letterSpacing: '-0.01em', fontWeight: '600' }],
+        'numeric-md': ['15px', { lineHeight: '1.2', fontWeight: '500' }],
+        'mono-sm': ['12px', { lineHeight: '1.4' }],
+      },
+      spacing: {
+        sidebar: '240px',
+        control: '36px',
+        'row-dense': '40px',
+        'row-comfortable': '48px',
+        touch: '44px',
+      },
+      maxWidth: {
+        content: '1440px',
+      },
+      boxShadow: {
+        pop: '0 4px 12px rgba(15, 26, 42, 0.10)',
+        layer: '0 16px 40px rgba(15, 26, 42, 0.18)',
+      },
+    },
+  },
+  plugins: [],
+};

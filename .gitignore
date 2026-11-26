@@ -1,0 +1,27 @@
+# dependensi & hasil build
+node_modules/
+dist/
+dist-web/
+build/
+*.tsbuildinfo
+
+# konfigurasi rahasia
+.env
+.env.*
+!.env.example
+
+# kunci tanda tangan APK — simpan di tempat aman, jangan di repositori
+*.keystore
+*.jks
+
+# artefak
+*.apk
+*.aab
+*.idsig
+
+# metadata hosting/alat
+.accio-site.json
+.accio/
+.DS_Store
+Thumbs.db
+*.log
