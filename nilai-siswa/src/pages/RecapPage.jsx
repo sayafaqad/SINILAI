@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Download, FileSpreadsheet, Inbox, Printer, TriangleAlert } from 'lucide-react';
 import { useApp } from '../store/AppStore';
@@ -36,6 +36,14 @@ export default function RecapPage() {
   const [mode, setMode] = useState('class');
   const [scope, setScope] = useState(DEFAULT_RECAP_SCOPE);
   const [schoolId, setSchoolId] = useState(schools[0]?.id || '');
+
+  // Data sekolah dimuat setelah halaman ini dipasang. Tanpa penyesuaian ini
+  // filter sekolah tetap kosong, sehingga halaman tampak "belum ada data"
+  // padahal datanya sudah tersimpan (mis. saat halaman dimuat ulang langsung
+  // di alamat ini).
+  useEffect(() => {
+    if (!schoolId && schools.length > 0) setSchoolId(schools[0].id);
+  }, [schoolId, schools]);
   const [classId, setClassId] = useState('');
   const [subjectId, setSubjectId] = useState('');
   const [studentId, setStudentId] = useState('');

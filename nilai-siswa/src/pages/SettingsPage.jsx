@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import {
   Cloud,
   Download,
+  LogIn,
   LogOut,
   Plus,
   RefreshCw,
@@ -43,10 +44,19 @@ export default function SettingsPage() {
     exportBackup,
     restoreBackup,
     resetAll,
+    loading,
   } = useApp();
   const toast = useToast();
 
   const [schoolId, setSchoolId] = useState(schools[0]?.id || '');
+
+  // Data sekolah dimuat setelah halaman ini dipasang. Tanpa penyesuaian ini
+  // filter sekolah tetap kosong, sehingga halaman tampak "belum ada data"
+  // padahal datanya sudah tersimpan (mis. saat halaman dimuat ulang langsung
+  // di alamat ini).
+  useEffect(() => {
+    if (!schoolId && schools.length > 0) setSchoolId(schools[0].id);
+  }, [schoolId, schools]);
   const [weights, setWeights] = useState({});
   const [newComponent, setNewComponent] = useState(NEW_COMPONENT);
   const [componentErrors, setComponentErrors] = useState({});
@@ -58,6 +68,22 @@ export default function SettingsPage() {
   const [predikatErrors, setPredikatErrors] = useState({});
   const [yearForm, setYearForm] = useState(settings.activeAcademicYear);
   const [kkmForm, setKkmForm] = useState(String(settings.defaultKkm ?? ''));
+  // Formulir ini mengisi nilai awal dari pengaturan, tetapi pengaturan baru
+  // terbaca dari perangkat setelah halaman terpasang. Tanpa pengisian ulang
+  // sesudah data siap, kolom menampilkan nilai bawaan (mis. KKM 75) padahal
+  // nilai tersimpan berbeda — pengguna bisa menyimpan angka lama tanpa sadar.
+  const [formTerisi, setFormTerisi] = useState(false);
+  useEffect(() => {
+    if (loading || formTerisi) return;
+    setYearForm(settings.activeAcademicYear);
+    setKkmForm(String(settings.defaultKkm ?? ''));
+    setPredikatForm({
+      A: String(settings.predikat.A),
+      B: String(settings.predikat.B),
+      C: String(settings.predikat.C),
+    });
+    setFormTerisi(true);
+  }, [loading, formTerisi, settings]);
   const [busy, setBusy] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [resetOpen, setResetOpen] = useState(false);
@@ -342,7 +368,7 @@ export default function SettingsPage() {
       </Card>
       ) : null}
 
-      <div className="grid gap-5 xl:grid-cols-2">
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
         <Card>
           <CardHeader
             title="Ambang predikat"
@@ -540,10 +566,10 @@ export default function SettingsPage() {
   );
 }
 
-/** Status akun: apakah data sedang disinkronkan, dan tombol keluar dari akun. */
+/** Status akun: sinkronisasi, masuk dengan akun, dan keluar dari akun. */
 function SyncCard() {
   const { sinkron } = useApp();
-  const { pengguna, email, keluar } = useAuth();
+  const { pengguna, email, keluar, modeLokal, tersinkron, keluarModeLokal } = useAuth();
   const toast = useToast();
   const [sibuk, setSibuk] = useState(false);
 
@@ -608,13 +634,52 @@ function SyncCard() {
         ) : (
           <>
             <p className="text-body-sm text-muted-foreground">
-              Perangkat ini memakai mode lokal: data hanya tersimpan di perangkat ini dan tidak
-              berpindah ke perangkat lain.
+              {modeLokal
+                ? 'Perangkat ini memakai mode lokal: data hanya tersimpan di perangkat ini dan tidak berpindah ke perangkat lain.'
+                : 'Anda belum masuk ke akun mana pun.'}
             </p>
-            <p className="text-body-sm text-muted-foreground">
-              Untuk menyinkronkan, buka halaman masuk (keluar dari mode lokal lalu masuk dengan
-              akun) — data yang sudah ada akan diunggah ke akun Anda.
-            </p>
+            {tersinkron ? (
+              <>
+                <p className="text-body-sm text-muted-foreground">
+                  Masuk dengan akun agar data di perangkat ini ikut tersinkron. Data yang sudah ada
+                  tidak dihapus — data itu menjadi milik akun yang masuk.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    icon={LogIn}
+                    onClick={() => {
+                      keluarModeLokal();
+                      toast.info(
+                        'Masuk dengan akun',
+                        'Masukkan email dan sandi. Data di perangkat ini akan diunggah ke akun Anda.',
+                      );
+                    }}
+                  >
+                    Masuk dengan akun
+                  </Button>
+                  {modeLokal && (
+                    <Button
+                      variant="ghost"
+                      icon={LogOut}
+                      onClick={() => {
+                        keluarModeLokal();
+                        toast.info(
+                          'Keluar dari mode lokal',
+                          'Data di perangkat tetap tersimpan dan siap diunggah saat Anda masuk.',
+                        );
+                      }}
+                    >
+                      Keluar dari mode lokal
+                    </Button>
+                  )}
+                </div>
+              </>
+            ) : (
+              <p className="text-body-sm text-muted-foreground">
+                Sinkronisasi belum dikonfigurasi pada pemasangan ini (alamat dan kunci Supabase
+                belum diisi saat aplikasi dibangun). Data tetap tersimpan di perangkat ini.
+              </p>
+            )}
           </>
         )}
       </div>

@@ -178,6 +178,16 @@ export function AuthProvider({ children }) {
     setTanpaAkun(true);
   }, []);
 
+  /**
+   * Tinggalkan mode lokal tanpa menghapus data, supaya layar masuk muncul lagi
+   * dan pengguna dapat memakai akun (lalu data perangkat diunggah ke akun itu).
+   * Sebelumnya mode lokal bersifat permanen: sekali dipilih, layar masuk tidak
+   * pernah tampil lagi sehingga tidak ada cara masuk dengan akun.
+   */
+  const keluarModeLokal = useCallback(() => {
+    hapusTanpaAkun();
+  }, []);
+
   function hapusTanpaAkun() {
     try {
       window.localStorage.removeItem(KUNCI_LOKAL);
@@ -199,8 +209,9 @@ export function AuthProvider({ children }) {
       daftar,
       keluar,
       gunakanTanpaAkun,
+      keluarModeLokal,
     }),
-    [siap, pengguna, tanpaAkun, masuk, daftar, keluar, gunakanTanpaAkun],
+    [siap, pengguna, tanpaAkun, masuk, daftar, keluar, gunakanTanpaAkun, keluarModeLokal],
   );
 
   return <AuthContext.Provider value={nilai}>{children}</AuthContext.Provider>;

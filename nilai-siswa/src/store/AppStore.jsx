@@ -72,8 +72,8 @@ export function AppProvider({ children }) {
   const { idPengguna } = useAuth();
   const [state, setState] = useState(EMPTY_STATE);
   // Diisi setelah fungsi sinkronisasi dibuat; dipakai oleh aksi hapus agar
-  // perubahan langsung dikirim tanpa menunggu jeda.
-  const kirimSekarangRef = useRef(null);
+  // tombstone, antrean, dan pengiriman berjalan seketika tanpa menunggu jeda.
+  const hapusSekarangRef = useRef(null);
 
   /** Baca ulang seluruh data dari penyimpanan perangkat ini. */
   const muatUlang = useCallback(async () => {
@@ -196,9 +196,15 @@ export function AppProvider({ children }) {
   const deleteSchool = useCallback(
     async (schoolId) => {
       const counts = cascadeCounts({ schoolId }, state);
+      // Komponen penilaian ikut dihapus; sebelumnya hanya dibuang dari tampilan
+      // sehingga barisnya tertinggal di perangkat dan di server.
+      const componentIds = state.components
+        .filter((component) => component.schoolId === schoolId)
+        .map((component) => component.id);
       await removeMany('grades', counts.gradeIds);
       await removeMany('students', counts.studentIds);
       await removeMany('subjects', counts.subjectIds);
+      await removeMany('components', componentIds);
       await removeMany('classes', counts.classIds);
       await remove('schools', schoolId);
 
@@ -211,6 +217,14 @@ export function AppProvider({ children }) {
         students: previous.students.filter((student) => student.schoolId !== schoolId),
         grades: previous.grades.filter((grade) => grade.schoolId !== schoolId),
       }));
+      hapusSekarangRef.current?.([
+        ...counts.gradeIds.map((id) => ({ collection: 'grades', id })),
+        ...counts.studentIds.map((id) => ({ collection: 'students', id })),
+        ...counts.subjectIds.map((id) => ({ collection: 'subjects', id })),
+        ...componentIds.map((id) => ({ collection: 'components', id })),
+        ...counts.classIds.map((id) => ({ collection: 'classes', id })),
+        { collection: 'schools', id: schoolId },
+      ]);
       return counts;
     },
     [state],
@@ -271,6 +285,11 @@ export function AppProvider({ children }) {
         grades: previous.grades.filter((grade) => grade.classId !== classId),
         components: previous.components.filter((component) => component.classId !== classId),
       }));
+      hapusSekarangRef.current?.([
+        ...affectedGrades.map((grade) => ({ collection: 'grades', id: grade.id })),
+        ...affectedComponents.map((component) => ({ collection: 'components', id: component.id })),
+        { collection: 'classes', id: classId },
+      ]);
       return { students: updatedStudents.length, grades: affectedGrades.length };
     },
     [state],
@@ -314,8 +333,6 @@ export function AppProvider({ children }) {
       const affectedComponents = state.components.filter(
         (component) => component.subjectId === subjectId,
       );
-      tambahTombstone('subjects', subjectId);
-      affectedComponents.forEach((component) => tambahTombstone('components', component.id));
       await removeMany('grades', affectedGrades.map((grade) => grade.id));
       await removeMany('components', affectedComponents.map((component) => component.id));
       await remove('subjects', subjectId);
@@ -327,7 +344,11 @@ export function AppProvider({ children }) {
           (component) => component.subjectId !== subjectId,
         ),
       }));
-      kirimSekarangRef.current?.(0);
+      hapusSekarangRef.current?.([
+        ...affectedGrades.map((grade) => ({ collection: 'grades', id: grade.id })),
+        ...affectedComponents.map((component) => ({ collection: 'components', id: component.id })),
+        { collection: 'subjects', id: subjectId },
+      ]);
       return { grades: affectedGrades.length };
     },
     [state],
@@ -358,9 +379,6 @@ export function AppProvider({ children }) {
   const deleteComponent = useCallback(
     async (componentId) => {
       const affectedGrades = state.grades.filter((grade) => grade.componentId === componentId);
-      // Tandai permanen agar tarikan server tidak menghidupkan komponen ini lagi.
-      tambahTombstone('components', componentId);
-      affectedGrades.forEach((grade) => tambahTombstone('grades', grade.id));
       await removeMany('grades', affectedGrades.map((grade) => grade.id));
       await remove('components', componentId);
       setState((previous) => ({
@@ -369,7 +387,10 @@ export function AppProvider({ children }) {
         grades: previous.grades.filter((grade) => grade.componentId !== componentId),
       }));
       // Penghapusan langsung dikirim supaya tidak sempat ditarik kembali dari server.
-      kirimSekarangRef.current?.(0);
+      hapusSekarangRef.current?.([
+        ...affectedGrades.map((grade) => ({ collection: 'grades', id: grade.id })),
+        { collection: 'components', id: componentId },
+      ]);
       return { grades: affectedGrades.length };
     },
     [state.grades, state.components],
@@ -424,6 +445,12 @@ export function AppProvider({ children }) {
         students: previous.students.filter((student) => !studentIds.includes(student.id)),
         grades: previous.grades.filter((grade) => !studentIds.includes(grade.studentId)),
       }));
+      // Tanpa tombstone, tarikan server berikutnya menghidupkan lagi siswa dan
+      // nilainya yang baru saja dihapus.
+      hapusSekarangRef.current?.([
+        ...affectedGrades.map((grade) => ({ collection: 'grades', id: grade.id })),
+        ...studentIds.map((id) => ({ collection: 'students', id })),
+      ]);
       return { students: studentIds.length, grades: affectedGrades.length };
     },
     [state],
@@ -629,6 +656,34 @@ export function AppProvider({ children }) {
     simpanAntrianTersimpan(Array.from(antrian.current.values()));
     setSyncState({ keadaan: 'diam', pesan: '', waktu: new Date().toISOString() });
   }, [idPengguna]);
+
+  /**
+   * Penghapusan dikirim seketika, tanpa menunggu pembanding keadaan setelah
+   * render: id-nya ditandai permanen (tombstone), dimasukkan ke antrean, lalu
+   * dikirim. Ini yang mencegah data terhapus hidup lagi dari tarikan server
+   * ketika aplikasi ditutup sebelum jeda kirim selesai.
+   */
+  useEffect(() => {
+    hapusSekarangRef.current = (daftar) => {
+      (daftar || []).forEach(({ collection, id }) => {
+        if (!collection || !id) return;
+        tambahTombstone(collection, id);
+        antrian.current.set(`${collection}::${id}`, {
+          collection,
+          id,
+          payload: {},
+          updatedAt: '',
+          dihapus: true,
+        });
+      });
+      simpanAntrianTersimpan(Array.from(antrian.current.values()));
+      if (timerKirim.current) {
+        window.clearTimeout(timerKirim.current);
+        timerKirim.current = null;
+      }
+      kirimAntrian();
+    };
+  }, [kirimAntrian]);
 
   const jadwalkanKirim = useCallback(
     (jeda = JEDA_KIRIM) => {

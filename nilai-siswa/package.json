@@ -6,23 +6,31 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "uji": "esbuild scripts/uji-sinkron.mjs --bundle --platform=node --format=esm --external:@supabase/supabase-js --outfile=.uji/uji.mjs --log-level=warning && node .uji/uji.mjs",
+    "uji:peramban": "node scripts/uji-peramban.mjs",
+    "uji:alur": "node scripts/uji-alur.mjs",
+    "uji:ketahanan": "node scripts/uji-ketahanan.mjs",
+    "uji:offline": "node scripts/uji-offline.mjs",
+    "uji:akun": "node scripts/uji-akun.mjs"
   },
   "dependencies": {
+    "@supabase/supabase-js": "2.45.4",
     "@vitejs/plugin-react": "4.3.4",
-    "vite": "5.4.11",
+    "autoprefixer": "10.4.20",
+    "lucide-react": "0.469.0",
+    "postcss": "8.4.49",
     "react": "18.3.1",
     "react-dom": "18.3.1",
-    "lucide-react": "0.469.0",
     "react-router-dom": "6.28.0",
     "tailwindcss": "3.4.17",
-    "postcss": "8.4.49",
-    "autoprefixer": "10.4.20",
-    "xlsx": "0.18.5",
-    "@supabase/supabase-js": "2.45.4"
+    "vite": "5.4.11",
+    "xlsx": "0.18.5"
   },
   "devDependencies": {
-    "@rollup/wasm-node": "4.24.4"
+    "@rollup/wasm-node": "4.24.4",
+    "esbuild": "^0.21.5",
+    "playwright": "^1.49.1"
   },
   "overrides": {
     "rollup": "npm:@rollup/wasm-node@4.24.4"

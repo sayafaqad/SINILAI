@@ -184,6 +184,11 @@
     overflow-x: auto;
     overflow-y: auto;
     overscroll-behavior-x: contain;
+    /* Tanpa ini, tabel ber-min-width di dalam grid/flex memaksa kolomnya
+       melebar mengikuti isi (min-width: auto), sehingga seluruh halaman ikut
+       bergeser ke samping di layar ponsel. Dengan 0, tabel menggulir sendiri
+       di dalam kotaknya. */
+    min-width: 0;
   }
 
   .table-scroll::-webkit-scrollbar {

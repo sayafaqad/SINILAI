@@ -12,6 +12,28 @@ import { useToast } from '../components/ui/Toast';
 import { gradeKey, pairStats, assessmentTypeLabel } from '../lib/grading';
 import { EMPTY, cx, formatNumber, formatScore, parseScoreInput } from '../lib/format';
 
+/** Draf nilai yang belum disimpan, agar tidak hilang saat berpindah menu. */
+const KUNCI_DRAF = 'sinilai:draf-nilai';
+
+function bacaDraf() {
+  try {
+    const mentah = window.localStorage.getItem(KUNCI_DRAF);
+    const data = mentah ? JSON.parse(mentah) : null;
+    return data && typeof data === 'object' ? data : null;
+  } catch (error) {
+    return null;
+  }
+}
+
+function tulisDraf(data) {
+  try {
+    if (!data) window.localStorage.removeItem(KUNCI_DRAF);
+    else window.localStorage.setItem(KUNCI_DRAF, JSON.stringify(data));
+  } catch (error) {
+    /* penyimpanan penuh: draf tetap ada di memori */
+  }
+}
+
 export default function GradesPage() {
   const {
     loading,
@@ -26,12 +48,16 @@ export default function GradesPage() {
   } = useApp();
   const toast = useToast();
 
-  const [schoolId, setSchoolId] = useState('');
-  const [classId, setClassId] = useState('');
-  const [subjectId, setSubjectId] = useState('');
+  // Draf yang belum disimpan dipulihkan bersama pilihan sekolah/kelas/mapelnya,
+  // sehingga nilai yang sedang diketik tidak hilang ketika guru membuka menu
+  // lain atau aplikasi sempat tertutup.
+  const drafAwal = useState(() => bacaDraf())[0];
+  const [schoolId, setSchoolId] = useState(drafAwal?.schoolId || '');
+  const [classId, setClassId] = useState(drafAwal?.classId || '');
+  const [subjectId, setSubjectId] = useState(drafAwal?.subjectId || '');
   const [focusedComponent, setFocusedComponent] = useState('all');
   const [query, setQuery] = useState('');
-  const [draft, setDraft] = useState({});
+  const [draft, setDraft] = useState(drafAwal?.draft || {});
   const [saving, setSaving] = useState(false);
   const [pendingChange, setPendingChange] = useState(null);
 
@@ -113,6 +139,15 @@ export default function GradesPage() {
     [classStudents, components, subjectId, gradeIndex, subject, settings.predikat],
   );
 
+  // Simpan draf ke perangkat supaya tahan pindah menu maupun muat ulang.
+  useEffect(() => {
+    if (!hasUnsaved) {
+      tulisDraf(null);
+      return;
+    }
+    tulisDraf({ schoolId, classId, subjectId, draft });
+  }, [draft, hasUnsaved, schoolId, classId, subjectId]);
+
   useEffect(() => {
     if (!hasUnsaved) return undefined;
     const warn = (event) => {
@@ -180,6 +215,7 @@ export default function GradesPage() {
     try {
       const result = await saveGrades(cells);
       setDraft({});
+      tulisDraf(null);
       toast.success(
         'Nilai tersimpan',
         `${formatNumber(result.saved)} nilai disimpan${
@@ -634,7 +670,10 @@ export default function GradesPage() {
               <Button
                 variant="secondary"
                 icon={RotateCcw}
-                onClick={() => setDraft({})}
+                onClick={() => {
+                  setDraft({});
+                  tulisDraf(null);
+                }}
                 disabled={!hasUnsaved || saving}
               >
                 Batalkan

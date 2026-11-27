@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Award, FileSpreadsheet } from 'lucide-react';
 import { useApp } from '../store/AppStore';
@@ -36,6 +36,14 @@ export default function RankingPage() {
 
   const [mode, setMode] = useState('kelas');
   const [schoolId, setSchoolId] = useState(schools[0]?.id || '');
+
+  // Data sekolah dimuat setelah halaman ini dipasang. Tanpa penyesuaian ini
+  // filter sekolah tetap kosong, sehingga halaman tampak "belum ada data"
+  // padahal datanya sudah tersimpan (mis. saat halaman dimuat ulang langsung
+  // di alamat ini).
+  useEffect(() => {
+    if (!schoolId && schools.length > 0) setSchoolId(schools[0].id);
+  }, [schoolId, schools]);
   const [subjectId, setSubjectId] = useState('');
   const [classId, setClassId] = useState('');
   const [scope, setScope] = useState(DEFAULT_RANKING_SCOPE);

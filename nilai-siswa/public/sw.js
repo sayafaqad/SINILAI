@@ -1,101 +1,98 @@
 /*
- * SINILAI service worker — membuat aplikasi tetap terbuka tanpa internet.
+ * Service worker SINILAI.
  *
- * Aturan agar tetap aman:
- * - Hanya permintaan GET dari origin yang sama yang ditangani.
- * - Permintaan modul saat pengembangan selalu diteruskan ke jaringan, dan
- *   halaman pengembangan (yang memuat /@vite/client) tidak pernah disimpan ke
- *   cache, sehingga server pengembangan dan hot reload tetap berjalan normal.
- * - Navigasi: jaringan lebih dahulu, dengan kerangka aplikasi yang tersimpan
- *   sebagai cadangan saat luring.
- * - Berkas lain: disajikan dari cache lalu diperbarui di latar belakang.
+ * Tujuan: aplikasi tetap terbuka tanpa internet, tetapi pembaruan tidak pernah
+ * tertahan di cache lama.
+ *
+ * Aturan:
+ * - Halaman (navigasi) selalu diambil dari jaringan lebih dulu; cache hanya
+ *   dipakai bila jaringan gagal. Ini yang mencegah "versi lama" muncul terus.
+ * - Berkas statis (JS/CSS/ikon) memakai cache sambil memperbarui di latar.
+ * - Cache lama dihapus setiap kali berkas ini berubah (nama cache berisi versi).
+ * - Pada server pengembangan lokal (vite dev) tidak ada yang di-cache.
  */
-
-const CACHE = 'sinilai-v2';
-const SHELL = ['./index.html'];
-const PRACACHE = ['./manifest.webmanifest', './assets/images/icon-512.png'];
-
-function isDevRequest(url) {
-  return (
-    url.pathname.startsWith('/src/') ||
-    url.pathname.startsWith('/@') ||
-    url.pathname.startsWith('/node_modules/') ||
-    url.pathname.startsWith('/__vite') ||
-    /\.(jsx|ts|tsx)$/.test(url.pathname)
-  );
-}
-
-/** Halaman hasil server pengembangan tidak boleh masuk cache. */
-function isDevHtml(teks) {
-  return teks.includes('/@vite/client') || teks.includes('/src/main.jsx');
-}
+const VERSI_CACHE = 'sinilai-v5';
+const CACHE_HALAMAN = `${VERSI_CACHE}-halaman`;
+const CACHE_ASET = `${VERSI_CACHE}-aset`;
+const JALUR_DEV = ['/src/', '/@', '/node_modules/', '/__vite'];
+const LOOPBACK = ['127.0.0.1', 'localhost', '[::1]'].includes(self.location.hostname);
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(
-    (async () => {
-      const cache = await caches.open(CACHE);
-      await cache.addAll(PRACACHE).catch(() => undefined);
-      await self.skipWaiting();
-    })(),
-  );
+  self.skipWaiting();
+  event.waitUntil(caches.open(CACHE_HALAMAN));
 });
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     (async () => {
-      const names = await caches.keys();
-      await Promise.all(names.filter((name) => name !== CACHE).map((name) => caches.delete(name)));
+      const nama = await caches.keys();
+      await Promise.all(
+        nama
+          .filter((n) => !n.startsWith(VERSI_CACHE))
+          .map((n) => caches.delete(n)),
+      );
       await self.clients.claim();
     })(),
   );
 });
 
-self.addEventListener('fetch', (event) => {
-  const request = event.request;
-  if (request.method !== 'GET') return;
-
+function bolehCache(request) {
+  if (request.method !== 'GET') return false;
   const url = new URL(request.url);
-  if (url.origin !== self.location.origin) return;
-  if (isDevRequest(url)) return;
+  if (url.origin !== self.location.origin) return false;
+  if (JALUR_DEV.some((awalan) => url.pathname.startsWith(awalan))) return false;
+  if (url.pathname.endsWith('.jsx') || url.pathname.endsWith('.tsx')) return false;
+  return true;
+}
 
+self.addEventListener('fetch', (event) => {
+  const { request } = event;
+  if (!bolehCache(request)) return;
+
+  // Navigasi: jaringan dulu (maks 3,5 detik), cache hanya sebagai cadangan.
   if (request.mode === 'navigate') {
     event.respondWith(
       (async () => {
+        const cache = await caches.open(CACHE_HALAMAN);
         try {
-          const response = await fetch(request);
-          const salinan = response.clone();
-          salinan
-            .text()
-            .then(async (teks) => {
-              if (teks && !isDevHtml(teks)) {
-                const cache = await caches.open(CACHE);
-                await cache.put('./index.html', response.clone());
-              }
-            })
-            .catch(() => undefined);
-          return response;
-        } catch {
-          const cached = await caches.match('./index.html');
-          return cached || Response.error();
+          const batas = new Promise((_, tolak) => setTimeout(tolak, 3500));
+          const respons = await Promise.race([fetch(request), batas]);
+          if (respons && respons.ok) {
+            const salinan = respons.clone();
+            cache.put(new Request(self.registration.scope), salinan);
+          }
+          return respons;
+        } catch (error) {
+          const tersimpan =
+            (await cache.match(new Request(self.registration.scope))) ||
+            (await cache.match('./index.html')) ||
+            (await cache.match('./'));
+          if (tersimpan) return tersimpan;
+          return new Response(
+            '<!doctype html><meta charset="utf-8"><title>SINILAI</title>' +
+              '<p style="font:16px system-ui;padding:24px">Aplikasi belum tersimpan untuk mode luring. ' +
+              'Sambungkan internet lalu buka kembali.</p>',
+            { status: 503, headers: { 'Content-Type': 'text/html; charset=utf-8' } },
+          );
         }
       })(),
     );
     return;
   }
 
+  if (LOOPBACK) return;
+
   event.respondWith(
     (async () => {
-      const cache = await caches.open(CACHE);
-      const cached = await cache.match(request);
-      const network = fetch(request)
-        .then((response) => {
-          if (response && response.ok && response.type === 'basic') {
-            cache.put(request, response.clone());
-          }
-          return response;
+      const cache = await caches.open(CACHE_ASET);
+      const tersimpan = await cache.match(request);
+      const dariJaringan = fetch(request)
+        .then((respons) => {
+          if (respons && respons.ok) cache.put(request, respons.clone());
+          return respons;
         })
         .catch(() => null);
-      return cached || (await network) || Response.error();
+      return tersimpan || (await dariJaringan) || Response.error();
     })(),
   );
 });

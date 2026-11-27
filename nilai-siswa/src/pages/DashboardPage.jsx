@@ -205,7 +205,7 @@ export default function DashboardPage() {
         />
       </div>
 
-      <div className="mt-6 grid gap-4 xl:grid-cols-2">
+      <div className="mt-6 grid grid-cols-1 gap-4 xl:grid-cols-2">
         <Card data-component="chart-card">
           <CardHeader
             title="Rata-rata nilai per mata pelajaran"
@@ -236,7 +236,7 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      <div className="mt-6 grid gap-4 xl:grid-cols-2">
+      <div className="mt-6 grid grid-cols-1 gap-4 xl:grid-cols-2">
         <Card data-component="completeness-card">
           <CardHeader
             title="Kelengkapan input nilai per kelas"
